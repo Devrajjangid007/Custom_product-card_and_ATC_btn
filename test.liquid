@@ -1,0 +1,92 @@
+{% assign product = section.settings.product_list %}
+
+{% for product in product %}
+{{ product.title }}
+<button class="custom-add-to-cart-button" data-variant-id="{{ product.selected_or_first_available_variant.id }}"> Add to Cart </button>
+
+
+
+<br>
+{% endfor %}
+<script>
+document.querySelectorAll('.custom-add-to-cart-button').forEach(button => {
+  button.addEventListener('click', function(e) {
+    e.preventDefault();
+
+    let variantId = this.getAttribute('data-variant-id');
+
+
+
+    let formData = {
+      'items': [{
+        'id': variantId,
+        'quantity': 1,
+        'properties': {
+          'Source': 'Product data', // Ye static property hai
+          'Date Added': new Date().toLocaleDateString() // Example property
+        }
+      }],
+      'sections': 'cart-drawer,cart-icon-bubble'
+    };
+
+
+    fetch(window.Shopify.routes.root + 'cart/add.js', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData)
+    })
+    .then(response => response.json())
+    .then(response => {
+      // 1. Cart drawer ko naye data ke saath update karna
+      if (document.querySelector('cart-drawer')) {
+        const cartDrawer = document.querySelector('cart-drawer');
+        
+        // Dawn theme ke standard method se drawer update karna
+        fetch(`${routes.cart_url}?section_id=cart-drawer`)
+          .then(res => res.text())
+          .then(html => {
+            const innerHTML = new DOMParser().parseFromString(html, 'text/html').querySelector('#CartDrawer').innerHTML;
+            document.querySelector('#CartDrawer').innerHTML = innerHTML;
+            
+            // Drawer ko open karna
+            cartDrawer.classList.remove('is-empty');
+            cartDrawer.open();
+          });
+          
+        // Header cart icon bubble update karna
+        if (response.sections && response.sections['cart-icon-bubble']) {
+          const iconBubble = document.getElementById('cart-icon-bubble');
+          if(iconBubble) iconBubble.innerHTML = response.sections['cart-icon-bubble'];
+        }
+      }
+    })
+    .catch((error) => {
+      console.error('Error:', error);
+    });
+  });
+});
+</script>
+
+
+ 
+
+
+
+{% schema %}
+{
+  "name": "cstm_product",
+  "settings": [
+    {
+        "type": "product_list",
+        "id": "product_list",
+        "label": "Products",
+    }
+  ],
+
+  "presets": [
+    {
+      "name": "cstm_product"
+    }
+  ]
+}
+{% endschema %}
